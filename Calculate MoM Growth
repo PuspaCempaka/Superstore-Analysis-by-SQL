@@ -1,0 +1,19 @@
+/*
+First, create the monthly table to measure the current sales and last month sales for each month in each year.
+Then, create the second table to summarize all the information and calculate the MoM Growth.
+Use "WHERE" clause to specify the year if necessary.
+*/
+
+WITH Monthly AS
+(SELECT YEAR(Order_Date) AS Year,
+       MONTH(Order_Date) AS Month,
+	   FORMAT(Order_Date,'MMMM') AS Month_Name,
+	   ROUND(SUM(Sales),2) AS Total_Sales,
+	   ROUND(LAG(SUM(Sales)) OVER (ORDER BY YEAR(Order_Date),Month(Order_Date)),2) AS Sales_LM
+FROM [Superstore_Data].[dbo].[Order]
+GROUP BY YEAR(Order_Date), MONTH(Order_Date), FORMAT(Order_Date,'MMMM'))
+
+SELECT *,
+       ROUND(((Total_Sales - Sales_LM)/Sales_LM)*100,2) AS MoM_Growth
+FROM Monthly
+WHERE Year='2017';
