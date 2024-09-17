@@ -1,0 +1,23 @@
+/* 
+I create 2 tables to make it easier to create the queries for me.
+In the first table:
+1) Compute the total sales for each customer in the target year (in this case : 2017).
+2) Use a ranking function to assign ranks or percentiles to each customer based on their total sales --> I use NTILE() to create the segments.
+   note: The NTILE(100) divides the customers into 100 equal-sized percentiles.
+
+In the second table, I categorize customers into the desired segments.
+*/
+
+WITH Customers AS
+(SELECT Customer_ID, Customer_Name, ROUND(SUM(Sales),2) AS Total_Sales,
+       NTILE(100) OVER (ORDER BY SUM(Sales) DESC) AS percentile
+FROM [Superstore_Data].[dbo].[Order]
+WHERE YEAR(Order_Date) = 2017
+GROUP BY Customer_ID, Customer_Name)
+
+SELECT *,CASE 
+         WHEN percentile<=20 THEN 'TOP Spender'
+		 WHEN percentile<=50 THEN 'Medium Spender'
+		 ELSE 'Low Spender'
+		 END AS Category
+FROM Customers;
