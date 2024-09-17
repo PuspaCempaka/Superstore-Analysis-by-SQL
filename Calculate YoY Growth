@@ -1,0 +1,12 @@
+/*
+use LAG() function to calculate the sales from previous year then use this calculation to create the YoY Growth
+YoY Growth = ((Total Sales - Sales PY)/Sales PY) * 100
+*/
+SELECT 
+    YEAR(order_date) AS Year,
+    ROUND(SUM(sales),2) AS Total_Sales,
+    ROUND(LAG(SUM(sales)) OVER (ORDER BY YEAR(order_date)),2) AS Sales_PY,
+    ROUND((SUM(sales) - LAG(SUM(sales)) OVER (ORDER BY YEAR(order_date))) / LAG(SUM(sales)) OVER (ORDER BY YEAR(order_date)) * 100,2) AS YoY_Growth
+FROM [Superstore_Data].[dbo].[Order]
+GROUP BY YEAR(order_date)
+ORDER BY YEAR;
