@@ -1,0 +1,6 @@
+SELECT Category, ROUND(SUM(Sales),2) AS Category_Sales,
+       ROUND(SUM(Sales)/(SELECT SUM(Sales) FROM [Superstore_Data].[dbo].[Order] WHERE YEAR(Order_Date)=2017 )*100,1) AS Sales_Contribution
+FROM [Superstore_Data].[dbo].[Order]
+WHERE YEAR(Order_Date)=2017
+GROUP BY Category
+ORDER BY Category_Sales DESC;
