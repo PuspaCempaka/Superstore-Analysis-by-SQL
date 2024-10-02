@@ -1,0 +1,69 @@
+/*
+Create the REF table for average freq and sales which will be used to categorized the frequency and monetary for each customer in table Summary.
+Actually, this can be done in 1 table, however, the syntax for categorized the frequency and monetary will be very long and not easy to read, thus I divided into 2 tables.
+*/
+
+WITH REF AS
+(SELECT COUNT(DISTINCT Order_ID)/COUNT(DISTINCT Customer_ID) AS Avg_freq,
+ SUM(Sales)/COUNT(DISTINCT Customer_ID) AS Avg_Sales,
+ SUM(Sales) AS Sales
+ FROM [Superstore_Data].[dbo].[Order]
+ WHERE YEAR(Order_Date) = '2017')
+
+, Summary AS
+(SELECT Customer_ID,
+        MAX(Order_Date)AS Recency,
+		CASE WHEN MAX(Order_Date)> '2017/10/31' THEN 'Recent'  
+			 WHEN MAX(Order_Date)< '2017/07/01' THEN 'more than 6 months'
+		ELSE 'in P6M'
+		END AS R_Cat,
+
+        COUNT(DISTINCT Order_ID) AS Frequency,
+		CASE WHEN COUNT(DISTINCT Order_ID) > (SELECT Avg_freq FROM Ref) THEN 'Frequent'
+		ELSE 'Not Frequent' END AS F_Cat,
+
+	    ROUND(SUM(Sales),2) AS Monetary,
+		CASE WHEN SUM(Sales) > (SELECT Avg_Sales FROM Ref) THEN 'Above average'
+		ELSE 'Below average' END AS M_Cat
+FROM [Superstore_Data].[dbo].[Order]
+WHERE YEAR(Order_Date) = '2017'
+GROUP BY Customer_ID)
+
+/*in the next table, I create the RFM group based on categorization in recency, frequency and monetary*/
+
+, RFM AS
+(SELECT *,
+       CASE 
+	   WHEN R_Cat='Recent' AND F_Cat='Frequent' AND M_Cat='Above Average' THEN 'G1'
+	   WHEN R_Cat='Recent' AND F_Cat='Not Frequent' AND M_Cat='Above Average' THEN 'G2'
+	   WHEN R_Cat='Recent' AND F_Cat='Frequent' AND M_Cat='Below Average' THEN 'G3'
+	   WHEN R_Cat='Recent' AND F_Cat='Not Frequent' AND M_Cat='Below Average' THEN 'G4'
+
+	   WHEN R_Cat='in P6M' AND F_Cat='Frequent' AND M_Cat='Above Average' THEN 'G5'
+	   WHEN R_Cat='in P6M' AND F_Cat='Not Frequent' AND M_Cat='Above Average' THEN 'G6'
+	   WHEN R_Cat='in P6M' AND F_Cat='Frequent' AND M_Cat='Below Average' THEN 'G7'
+	   WHEN R_Cat='in P6M' AND F_Cat='Not Frequent' AND M_Cat='Below Average' THEN 'G8'
+
+	   WHEN R_Cat='more than 6 months' AND F_Cat='Frequent' AND M_Cat='Above Average' THEN 'G9'
+	   WHEN R_Cat='more than 6 months' AND F_Cat='Not Frequent' AND M_Cat='Above Average' THEN 'G10'
+	   WHEN R_Cat='more than 6 months' AND F_Cat='Frequent' AND M_Cat='Below Average' THEN 'G11'
+	   WHEN R_Cat='more than 6 months' AND F_Cat='Not Frequent' AND M_Cat='Below Average' THEN 'G12'
+
+	   ELSE 'Not Applicable'
+	   END AS RFM_Group
+FROM Summary)
+
+/*
+Next, I create a table to identify the number of customer, sales contribution, average frequency purchase and basket size for each group of RFM.
+If you compare with my visualization in tableau, the number is slightly different since it use different requirement for frequency and monetary categorization
+*/
+
+SELECT RFM_Group, 
+       SUM(Monetary) AS T_Sales,
+	   CEILING(SUM(Monetary)/(SELECT Sales FROM REF) * 100) AS Sales_Contribution,
+	   COUNT(Customer_ID) AS T_Customer,
+	   SUM(Frequency)/COUNT(Customer_ID) AS Avg_Frequency,
+	   ROUND(SUM(Monetary)/COUNT(Customer_ID),2) AS Avg_Basket_Size
+FROM RFM
+GROUP BY RFM_Group
+ORDER BY T_Sales DESC;
