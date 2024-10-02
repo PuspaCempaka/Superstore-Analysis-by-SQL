@@ -1,0 +1,32 @@
+/*
+First, calculate the Recency by finding the number of days since the last purchase for each customer.
+Then calculate Frequency (How often the customer made purchases) and Monetary (The total amount the customer spent).
+
+Divide the customers into quantiles for each RFM metric to rank them. 
+Use NTILE() to classify customers into groups (e.g., top 20% for Recency, Frequency, and Monetary).
+This will create scores from 1 to 5 for Recency, Frequency, and Monetary (with 5 being the best score).
+Combine the three RFM scores into one RFM score which will generate a 3-digit RFM score like 555 (high-value customers) or 111 (low-value customers).
+Based on the RFM scores, you can segment customers into different groups (e.g., loyal, at-risk, new, etc.).                                             
+*/
+
+WITH REF AS
+(SELECT Customer_ID,
+        DATEDIFF(day, MAX(Order_Date), (SELECT MAX(Order_Date) FROM [Superstore_Data].[dbo].[Order])) AS Recency,
+	    NTILE(5) OVER (ORDER BY DATEDIFF(day, MAX(Order_Date), (SELECT MAX(Order_Date) FROM [Superstore_Data].[dbo].[Order])) DESC) AS R_Score,
+        COUNT(DISTINCT Order_ID) AS Frequency,
+	    NTILE(5) OVER (ORDER BY COUNT(DISTINCT Order_ID) ASC) AS F_Score,
+	    ROUND(SUM(Sales),2) AS Monetary,
+	    NTILE(5) OVER (ORDER BY SUM(Sales) ASC) AS M_Score
+FROM [Superstore_Data].[dbo].[Order]
+WHERE YEAR(Order_Date) = '2017'
+GROUP BY Customer_ID)
+
+SELECT *,
+       CASE 
+	   WHEN R_Score=5 AND F_Score=5 AND M_Score=5 THEN 'Champions'
+	   WHEN R_Score>=4 AND F_Score>=4 AND M_Score>=4 THEN 'Loyal Customers'
+	   WHEN R_Score<=2 AND F_Score<=2 AND M_Score<=2 THEN 'At Risk'
+	   ELSE 'Others'
+	   END AS RFM_Group
+FROM REF
+ORDER BY Customer_ID;
