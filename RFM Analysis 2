@@ -2,7 +2,7 @@
 First, calculate the Recency by finding the number of days since the last purchase for each customer.
 Then calculate Frequency (How often the customer made purchases) and Monetary (The total amount the customer spent).
 
-Divide the customers into quantiles for each RFM metric to rank them. 
+Divide the customers into quintiles for each RFM metric to rank them. 
 Use NTILE() to classify customers into groups (e.g., top 20% for Recency, Frequency, and Monetary).
 This will create scores from 1 to 5 for Recency, Frequency, and Monetary (with 5 being the best score).
 Combine the three RFM scores into one RFM score which will generate a 3-digit RFM score like 555 (high-value customers) or 111 (low-value customers).
